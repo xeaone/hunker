@@ -1,3 +1,7 @@
+
+// TODO: add async
+var Each = require('./lib/each');
+
 var Path = require('./lib/path');
 var Os = require('./lib/os');
 var Fs = require('./lib/fs');
