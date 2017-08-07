@@ -1,30 +1,29 @@
 
-// TODO: add async
 var Each = require('./lib/each');
-
 var Path = require('./lib/path');
 var Os = require('./lib/os');
 var Fs = require('./lib/fs');
 
 function Hunker (options) {
+	var self = this;
+
 	options = options || {};
-	this.data = options.data || [];
-	this.name = options.name || 'default';
-	this.persist = options.persist === undefined ? true : false;
-	this.directory = options.directory || Path.join(Os.homedir(), '.hunker');
-	this.path = Path.join(this.directory, this.name + '.json');
 
-	// this.uglify = options.uglify === undefined ? true : false;
+	self.data = options.data || [];
+	self.name = options.name || 'default';
+	self.persist = options.persist === undefined ? true : false;
+	self.directory = options.directory || Path.join(Os.homedir(), '.hunker');
+	self.path = Path.join(self.directory, self.name + '.json');
 
-	if (!Fs.existsSync(this.directory)) {
-		Fs.mkdirSync(this.directory);
+	if (!Fs.existsSync(self.directory)) {
+		Fs.mkdirSync(self.directory);
 	}
 
-	if (!Fs.existsSync(this.path)) {
-		this.writeSync();
+	if (!Fs.existsSync(self.path)) {
+		self.writeSync();
 	}
 
-	this.readSync();
+	self.readSync();
 }
 
 Hunker.prototype.readSync = function () {
@@ -67,13 +66,27 @@ Hunker.prototype.write = function (callback) {
 	}
 };
 
+Hunker.prototype.has = function (key, callback) {
+	var self = this;
+
+	Each(self.data, function (index, next) {
+		if (key === self.data[index][0]) {
+			callback(null, true);
+			next(true);
+		} else {
+			next();
+		}
+	}, function () {
+		callback(null, false);
+	});
+};
+
 Hunker.prototype.get = function (key, callback) {
 	var self = this;
 
-	Each(self.data, function (i, next) {
-	// for (var i = 0; i < self.data.length; i++) {
-		if (key === self.data[i][0]) {
-			callback(self.data[i][1]);
+	Each(self.data, function (index, next) {
+		if (key === self.data[index][0]) {
+			callback(null, self.data[index][1]);
 			next(true);
 		} else {
 			next();
@@ -81,46 +94,17 @@ Hunker.prototype.get = function (key, callback) {
 	}, function () {
 		callback();
 	});
-	// }
-};
-
-Hunker.prototype.has = function (key, callback) {
-	var self = this;
-
-	Each(self.data, function (i, next) {
-	// for (var i = 0; i < self.data.length; i++) {
-		if (key === self.data[i][0]) {
-			callback(true);
-			next(true);
-		} else {
-			next();
-		}
-	}, function () {
-		callback(false);
-	});
-	// }
-};
-
-Hunker.prototype.size = function () {
-	return this.data.length;
-};
-
-Hunker.prototype.push = function (value, callback) {
-	var self = this;
-
-	self.data[self.data.length] = [self.data.length, value];
-	self.write(function (error) {
-		callback(error);
-	});
 };
 
 Hunker.prototype.set = function (key, value, callback) {
-	var self = this;
+	var self = this, exists = false;
 
-	Each(self.data, function (i, next) {
-	// for (var i = 0; i < self.data.length; i++) {
-		if (key === self.data[i][0]) {
-			self.data[i][1] = value;
+	Each(self.data, function (index, next) {
+		if (key === self.data[index][0]) {
+			exists = true;
+
+			self.data[index][1] = value;
+
 			self.write(function (error) {
 				callback(error);
 				next(true);
@@ -129,19 +113,20 @@ Hunker.prototype.set = function (key, value, callback) {
 			next();
 		}
 	}, function () {
-		self.data[self.data.length] = [key, value];
-		self.write(callback);
+		if (!exists) {
+			self.data.push([key, value]);
+			self.write(callback);
+		}
 	});
-	// }
 };
 
 Hunker.prototype.remove = function (key, callback) {
 	var self = this;
 
-	Each(self.data, function (i, next) {
-	// for (var i = 0; i < self.data.length; i++) {
-		if (key === self.data[i][0]) {
-			self.data.splice(i, 1)[0][1];
+	Each(self.data, function (index, next) {
+		if (key === self.data[index][0]) {
+			self.data.splice(index, 1)[0][1];
+
 			self.write(function (error) {
 				callback(error);
 				next(true);
@@ -151,27 +136,32 @@ Hunker.prototype.remove = function (key, callback) {
 		}
 	}, function () {
 		callback();
-	});	// }
-};
-
-Hunker.prototype.removeById = function (id, callback) {
-	this.data.splice(id, 1);
-	this.write(callback);
+	});
 };
 
 Hunker.prototype.forEach = function (callback, context) {
 	var self = this;
 
-	context = context || null;
-
-	Each(self.data, function (i, next) {
-		callback.call(context, self.data[i][1], self.data[i][0], i, self.data);
+	Each(self.data, function (index, next) {
+		callback.call(context, self.data[index][1], self.data[index][0], index, self.data);
 		next();
 	});
+};
 
-	// for (var i = 0; i < this.data.length; i++) {
-	// 	callback.call(context, this.data[i][1], this.data[i][0], i, this.data);
-	// }
+Hunker.prototype.removeById = function (id, callback) {
+	var self = this;
+	self.data.splice(id, 1);
+	self.write(callback);
+};
+
+Hunker.prototype.push = function (value, callback) {
+	var self = this;
+	self.data.push([self.data.length, value]);
+	self.write(callback);
+};
+
+Hunker.prototype.size = function () {
+	return this.data.length;
 };
 
 module.exports = Hunker;
