@@ -21,85 +21,157 @@ function Hunker (options) {
 	}
 
 	if (!Fs.existsSync(this.path)) {
-		this.write();
+		this.writeSync();
 	}
 
-	this.read();
+	this.readSync();
 }
 
-Hunker.prototype.read = function () {
-	if (persist) {
+Hunker.prototype.readSync = function () {
+	if (this.persist) {
 		var data = Fs.readFileSync(this.path);
 		this.data = JSON.parse(data);
 	}
 };
 
-Hunker.prototype.write = function () {
-	if (persist) {
+Hunker.prototype.writeSync = function () {
+	if (this.persist) {
 		var data = JSON.stringify(this.data, null, '\t');
 		Fs.writeFileSync(this.path, data);
 	}
 };
 
-Hunker.prototype.get = function (key) {
-	for (var i = 0; i < this.data.length; i++) {
-		if (key === this.data[i][0]) {
-			return this.data[i][1];
-		}
+Hunker.prototype.read = function (callback) {
+	var self = this;
+
+	if (self.persist) {
+		Fs.readFile(this.path, function (error, data) {
+			self.data = JSON.parse(data);
+			callback(error, self.data);
+		});
+	} else {
+		callback();
 	}
 };
 
-Hunker.prototype.has = function (key) {
-	for (var i = 0; i < this.data.length; i++) {
-		if (key === this.data[i][0]) {
-			return true;
-		}
-	}
+Hunker.prototype.write = function (callback) {
+	var self = this;
 
-	return false;
+	if (self.persist) {
+		var data = JSON.stringify(self.data, null, '\t');
+		Fs.writeFile(self.path, data, function (error) {
+			callback(error);
+		});
+	} else {
+		callback();
+	}
+};
+
+Hunker.prototype.get = function (key, callback) {
+	var self = this;
+
+	Each(self.data, function (i, next) {
+	// for (var i = 0; i < self.data.length; i++) {
+		if (key === self.data[i][0]) {
+			callback(self.data[i][1]);
+			next(true);
+		} else {
+			next();
+		}
+	}, function () {
+		callback();
+	});
+	// }
+};
+
+Hunker.prototype.has = function (key, callback) {
+	var self = this;
+
+	Each(self.data, function (i, next) {
+	// for (var i = 0; i < self.data.length; i++) {
+		if (key === self.data[i][0]) {
+			callback(true);
+			next(true);
+		} else {
+			next();
+		}
+	}, function () {
+		callback(false);
+	});
+	// }
 };
 
 Hunker.prototype.size = function () {
 	return this.data.length;
 };
 
-Hunker.prototype.push = function (value) {
-	this.data[this.data.length] = [this.data.length, value];
-	return this.write();
+Hunker.prototype.push = function (value, callback) {
+	var self = this;
+
+	self.data[self.data.length] = [self.data.length, value];
+	self.write(function (error) {
+		callback(error);
+	});
 };
 
-Hunker.prototype.set = function (key, value) {
-	for (var i = 0; i < this.data.length; i++) {
-		if (key === this.data[i][0]) {
-			return this.data[i][1] = value;
+Hunker.prototype.set = function (key, value, callback) {
+	var self = this;
+
+	Each(self.data, function (i, next) {
+	// for (var i = 0; i < self.data.length; i++) {
+		if (key === self.data[i][0]) {
+			self.data[i][1] = value;
+			self.write(function (error) {
+				callback(error);
+				next(true);
+			});
+		} else {
+			next();
 		}
-	}
-
-	this.data[this.data.length] = [key, value];
-
-	return this.write();
+	}, function () {
+		self.data[self.data.length] = [key, value];
+		self.write(callback);
+	});
+	// }
 };
 
-Hunker.prototype.remove = function (key) {
-	for (var i = 0; i < this.data.length; i++) {
-		if (key === this.data[i][0]) {
-			this.data.splice(i, 1)[0][1];
-			return this.write();
+Hunker.prototype.remove = function (key, callback) {
+	var self = this;
+
+	Each(self.data, function (i, next) {
+	// for (var i = 0; i < self.data.length; i++) {
+		if (key === self.data[i][0]) {
+			self.data.splice(i, 1)[0][1];
+			self.write(function (error) {
+				callback(error);
+				next(true);
+			});
+		} else {
+			next();
 		}
-	}
+	}, function () {
+		callback();
+	});	// }
 };
 
-Hunker.prototype.removeById = function (id) {
+Hunker.prototype.removeById = function (id, callback) {
 	this.data.splice(id, 1);
-	return this.write();
+	this.write(callback);
 };
 
 Hunker.prototype.forEach = function (callback, context) {
+	var self = this;
+
 	context = context || null;
 
-	for (var i = 0; i < this.data.length; i++) {
-		callback.call(context, this.data[i][1], this.data[i][0], i, this.data);
-	}
+	Each(self.data, function (i, next) {
+		callback.call(context, self.data[i][1], self.data[i][0], i, self.data);
+		next();
+	});
+
+	// for (var i = 0; i < this.data.length; i++) {
+	// 	callback.call(context, this.data[i][1], this.data[i][0], i, this.data);
+	// }
 };
 
 module.exports = Hunker;
