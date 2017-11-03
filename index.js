@@ -1,167 +1,151 @@
+'use strict';
 
-var Each = require('./lib/each');
-var Path = require('./lib/path');
-var Os = require('./lib/os');
-var Fs = require('./lib/fs');
+const Path = require('./lib/path');
+const Os = require('./lib/os');
+const Fs = require('./lib/fs');
 
 function Hunker (options) {
-	var self = this;
-
 	options = options || {};
-
-	self.data = options.data || [];
-	self.name = options.name || 'default';
-	self.persist = options.persist === undefined ? true : false;
-	self.directory = options.directory || Path.join(Os.homedir(), '.hunker');
-	self.path = Path.join(self.directory, self.name + '.json');
-
-	if (!Fs.existsSync(self.directory)) {
-		Fs.mkdirSync(self.directory);
-	}
-
-	if (!Fs.existsSync(self.path)) {
-		self.writeSync();
-	}
-
-	self.readSync();
+	this.BREAK = 2;
+	this.data = options.data || [];
+	this.name = options.name || 'default';
+	this.home = options.home || Os.homedir();
+	this.persist = options.persist === undefined ? true : false;
+	this.folder = Path.join(this.home, 'hunker');
+	this.path = Path.join(this.folder, this.name + '.json');
 }
 
-Hunker.prototype.readSync = function () {
-	if (this.persist) {
-		var data = Fs.readFileSync(this.path);
-		this.data = JSON.parse(data);
+Hunker.prototype.setup = async function () {
+
+	if (!Fs.existsSync(this.folder)) {
+		await Fs.mkdir(this.folder);
 	}
-};
 
-Hunker.prototype.writeSync = function () {
-	if (this.persist) {
-		var data = JSON.stringify(this.data, null, '\t');
-		Fs.writeFileSync(this.path, data);
+	if (!Fs.existsSync(this.path)) {
+		await Fs.writeFile(this.path, '[]');
 	}
+
+	await this.read();
 };
 
-Hunker.prototype.read = function (callback) {
-	var self = this;
+Hunker.prototype.parse = async function (data) {
+	return JSON.parse(data);
+};
 
-	if (self.persist) {
-		Fs.readFile(this.path, function (error, data) {
-			self.data = JSON.parse(data);
-			callback(error, self.data);
-		});
-	} else {
-		callback();
+Hunker.prototype.stringify = async function (data) {
+	return JSON.stringify(data, null, '\t');
+};
+
+Hunker.prototype.read = async function () {
+	const data = await Fs.readFile(this.path, 'utf8');
+	this.data = await this.parse(data);
+};
+
+Hunker.prototype.write = async function () {
+	const data = await this.stringify(this.data);
+	await Fs.writeFile(this.path, data);
+};
+
+Hunker.prototype.hasByIndex = async function (index) {
+	return this.data[index] ? true : false;
+};
+
+Hunker.prototype.getByIndex = async function (index) {
+	return this.data[index];
+};
+
+Hunker.prototype.setByIndex = async function (index, item) {
+	index = index < 0 ? this.data.length+index : index;
+	index = index >= this.data.length ? this.data.length-1 : index;
+	Object.assign(this.data[index], item);
+	await this.write();
+};
+
+Hunker.prototype.traverse = async function (keys, item) {
+	for (let i = 0, l = keys.length; i < l; i++) {
+		item = item[keys[i]];
 	}
+	return item;
 };
 
-Hunker.prototype.write = function (callback) {
-	var self = this;
+// Hunker.prototype.each = async function (items, callback) {
+// 	for (var i = 0, l = items.length; i < l; i++) {
+// 		var item = items[i];
+// 		var flag = await callback.call(this, item, i, items);
+// 		if (flag === this.BREAK) break;
+// 	}
+// };
 
-	if (self.persist) {
-		var data = JSON.stringify(self.data, null, '\t');
-		Fs.writeFile(self.path, data, function (error) {
-			callback(error);
-		});
-	} else {
-		callback();
+Hunker.prototype.find = async function (data) {
+
+	const keys = Array.isArray(data.keys) ? data.keys : [data.keys];
+	const value = data.value;
+	const last = keys.pop();
+
+	for (let i = 0, l = this.data.length; i < l; i++) {
+
+		let item = this.data[i];
+		let copy = await this.traverse(keys, item);
+
+		if (value === copy[last]) {
+			return {
+				key: last,
+				item: copy,
+				value: value
+			};
+		}
+
 	}
+
 };
 
-Hunker.prototype.has = function (key, callback) {
-	var self = this;
-
-	Each(self.data, function (index, next) {
-		if (key === self.data[index][0]) {
-			callback(null, true);
-			next(true);
-		} else {
-			next();
-		}
-	}, function () {
-		callback(null, false);
-	});
+Hunker.prototype.has = async function (data) {
+	const result = await this.find(data);
+	return result ? true : false;
 };
 
-Hunker.prototype.get = function (key, callback) {
-	var self = this;
-
-	Each(self.data, function (index, next) {
-		if (key === self.data[index][0]) {
-			callback(null, self.data[index][1]);
-			next(true);
-		} else {
-			next();
-		}
-	}, function () {
-		callback();
-	});
+Hunker.prototype.get = async function (data) {
+	const result = await this.find(data);
+	return result.item;
 };
 
-Hunker.prototype.set = function (key, value, callback) {
-	var self = this, exists = false;
+Hunker.prototype.set = async function (data) {
+	const result = await this.find(data);
 
-	Each(self.data, function (index, next) {
-		if (key === self.data[index][0]) {
-			exists = true;
+	if (result) {
+		result.item[result.key] = data.data;
+	}
 
-			self.data[index][1] = value;
-
-			self.write(function (error) {
-				callback(error);
-				next(true);
-			});
-		} else {
-			next();
-		}
-	}, function () {
-		if (!exists) {
-			self.data.push([key, value]);
-			self.write(callback);
-		}
-	});
+	await this.write();
 };
 
-Hunker.prototype.remove = function (key, callback) {
-	var self = this;
+// Hunker.prototype.remove = async function (key) {
+// 	const index = await this.find(key);
+//
+// 	if (index) {
+// 		this.data.splice(index, 1)[0][1];
+// 		await this.write();
+// 	}
+// };
 
-	Each(self.data, function (index, next) {
-		if (key === self.data[index][0]) {
-			self.data.splice(index, 1)[0][1];
-
-			self.write(function (error) {
-				callback(error);
-				next(true);
-			});
-		} else {
-			next();
-		}
-	}, function () {
-		callback();
-	});
+Hunker.prototype.push = async function (value) {
+	this.data.push(value);
+	await this.write();
 };
 
-Hunker.prototype.forEach = function (callback, context) {
-	var self = this;
-
-	Each(self.data, function (index, next) {
-		callback.call(context, self.data[index][1], self.data[index][0], index, self.data);
-		next();
-	});
-};
-
-Hunker.prototype.removeById = function (id, callback) {
-	var self = this;
-	self.data.splice(id, 1);
-	self.write(callback);
-};
-
-Hunker.prototype.push = function (value, callback) {
-	var self = this;
-	self.data.push([self.data.length, value]);
-	self.write(callback);
-};
-
-Hunker.prototype.size = function () {
-	return this.data.length;
-};
+// Hunker.prototype.forEach = async function (callback, context) {
+// 	for (let i = 0, l = this.data.length; i < l; i++) {
+// 		await callback.call(context, this.data[i][1], this.data[i][0], i, this.data);
+// 	}
+// };
+//
+// Hunker.prototype.removeById = async function (id) {
+// 	this.data.splice(id, 1);
+// 	await this.write();
+// };
+//
+// Hunker.prototype.size = function () {
+// 	return this.data.length;
+// };
 
 module.exports = Hunker;

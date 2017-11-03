@@ -3,23 +3,31 @@ var Path = require('path');
 
 var options = {
 	name: 'users',
-	directory: Path.join(process.cwd(), '.hunker')
+	home: Path.join(__dirname, 'dev')
 };
 
 var Users = new Hunker(options);
 
-Users.push({ name: 'alex' }, function (error) {
-	if (error) throw error;
+(async function () {
+	try {
 
-	Users.push({ name: 'jon' }, function (error) {
-		if (error) throw error;
+		await Users.setup();
 
-		Users.set('key', { name: 'dude' }, function (error) {
-			if (error) throw error;
+		await Users.push({ name: 'alex' });
 
-			Users.forEach(function (key, value) {
-				console.log(value);
-			});
+		await Users.push({ name: 'jon' });
+
+		await Users.set({
+			keys: 'name',
+			value: 'jon',
+			data: 'dude'
 		});
-	});
-});
+
+		// await Users.forEach(async function (key, value) {
+		// 	console.log(value);
+		// });
+
+	} catch (e) {
+		console.error(e);
+	}
+}());
