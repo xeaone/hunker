@@ -3,6 +3,7 @@
 const Path = require('./lib/path');
 const Os = require('./lib/os');
 const Fs = require('./lib/fs');
+const Cycni = require('cycni');
 
 function Hunker (options) {
 	options = options || {};
@@ -46,106 +47,58 @@ Hunker.prototype.write = async function () {
 	await Fs.writeFile(this.path, data);
 };
 
-Hunker.prototype.hasByIndex = async function (index) {
-	return this.data[index] ? true : false;
+Hunker.prototype.hasById = async function (id) {
+	return this.data[id] ? true : false;
 };
 
-Hunker.prototype.getByIndex = async function (index) {
-	return this.data[index];
+Hunker.prototype.getById = async function (id) {
+	return this.data[id];
 };
 
-Hunker.prototype.setByIndex = async function (index, item) {
-	index = index < 0 ? this.data.length+index : index;
-	index = index >= this.data.length ? this.data.length-1 : index;
-	Object.assign(this.data[index], item);
+Hunker.prototype.setById = async function (id, item) {
+	id = id < 0 ? this.data.length+id : id;
+	id = id >= this.data.length ? this.data.length-1 : id;
+	Object.assign(this.data[id], item);
 	await this.write();
 };
 
-Hunker.prototype.traverse = async function (keys, item) {
-	for (let i = 0, l = keys.length; i < l; i++) {
-		item = item[keys[i]];
-	}
-	return item;
+Hunker.prototype.get = async function (opt) {
+	opt.data = this.data;
+	return await Cycni.get(opt);
 };
 
-// Hunker.prototype.each = async function (items, callback) {
-// 	for (var i = 0, l = items.length; i < l; i++) {
-// 		var item = items[i];
-// 		var flag = await callback.call(this, item, i, items);
-// 		if (flag === this.BREAK) break;
-// 	}
-// };
-
-Hunker.prototype.find = async function (data) {
-
-	const keys = Array.isArray(data.keys) ? data.keys : [data.keys];
-	const value = data.value;
-	const last = keys.pop();
-
-	for (let i = 0, l = this.data.length; i < l; i++) {
-
-		let item = this.data[i];
-		let copy = await this.traverse(keys, item);
-
-		if (value === copy[last]) {
-			return {
-				key: last,
-				item: copy,
-				value: value
-			};
-		}
-
-	}
-
+Hunker.prototype.has = async function (opt) {
+	opt.data = this.data;
+	return await Cycni.has(opt);
 };
 
-Hunker.prototype.has = async function (data) {
-	const result = await this.find(data);
-	return result ? true : false;
+Hunker.prototype.size = async function (opt) {
+	opt.data = this.data;
+	await await Cycni.size(opt);
 };
 
-Hunker.prototype.get = async function (data) {
-	const result = await this.find(data);
-	return result.item;
-};
-
-Hunker.prototype.set = async function (data) {
-	const result = await this.find(data);
-
-	if (result) {
-		result.item[result.key] = data.data;
-	}
-
+Hunker.prototype.set = async function (opt) {
+	opt.data = this.data;
+	await Cycni.set(opt);
 	await this.write();
 };
 
-// Hunker.prototype.remove = async function (key) {
-// 	const index = await this.find(key);
-//
-// 	if (index) {
-// 		this.data.splice(index, 1)[0][1];
-// 		await this.write();
-// 	}
-// };
-
-Hunker.prototype.push = async function (value) {
-	this.data.push(value);
+Hunker.prototype.add = async function (opt) {
+	opt.data = this.data;
+	await Cycni.add(opt);
 	await this.write();
 };
 
-// Hunker.prototype.forEach = async function (callback, context) {
-// 	for (let i = 0, l = this.data.length; i < l; i++) {
-// 		await callback.call(context, this.data[i][1], this.data[i][0], i, this.data);
-// 	}
-// };
-//
-// Hunker.prototype.removeById = async function (id) {
-// 	this.data.splice(id, 1);
-// 	await this.write();
-// };
-//
-// Hunker.prototype.size = function () {
-// 	return this.data.length;
-// };
+Hunker.prototype.remove = async function (opt) {
+	opt.data = this.data;
+	await Cycni.remove(opt);
+	await this.write();
+};
+
+Hunker.prototype.push = async function (opt) {
+	opt.data = this.data;
+	await Cycni.push(opt);
+	await this.write();
+};
 
 module.exports = Hunker;
