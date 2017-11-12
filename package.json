@@ -1,6 +1,6 @@
 {
   "name": "hunker",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Hunker",
   "main": "index.js",
   "scripts": {
