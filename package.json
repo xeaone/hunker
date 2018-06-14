@@ -1,28 +1,29 @@
 {
-  "name": "hunker",
-  "version": "0.0.3",
-  "description": "Hunker",
-  "main": "index.js",
-  "scripts": {
-    "test": ""
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/AlexanderElias/hunker.git"
-  },
-  "keywords": [
-    "Database",
-    "Collection",
-    "Persistent",
-    "Memory"
-  ],
-  "author": "Alexander Elias",
-  "license": "MPL-2.0",
-  "bugs": {
-    "url": "https://github.com/AlexanderElias/hunker/issues"
-  },
-  "homepage": "https://github.com/AlexanderElias/hunker#readme",
-  "dependencies": {
-    "cycni": "^2.1.0"
-  }
+    "name": "hunker",
+    "version": "0.0.3",
+    "description": "Hunker",
+    "main": "index.js",
+    "scripts": {
+        "test": ""
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/AlexanderElias/hunker.git"
+    },
+    "keywords": [
+        "Database",
+        "Collection",
+        "Persistent",
+        "Memory"
+    ],
+    "author": "Alexander Elias",
+    "license": "MPL-2.0",
+    "bugs": {
+        "url": "https://github.com/AlexanderElias/hunker/issues"
+    },
+    "homepage": "https://github.com/AlexanderElias/hunker#readme",
+    "dependencies": {
+        "cycni": "^2.1.0",
+        "uuidy": "^1.1.2"
+    }
 }

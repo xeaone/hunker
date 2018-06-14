@@ -1,10 +1,14 @@
 
-var Path = {};
+let Path;
 
 if (typeof window === 'undefined') {
-	Path = require('path');
+
+    Path = require('path');
+
 } else {
 
+    Path = {};
+    
 	Path.join = function () {
 		return Array.prototype.join
 			.call(arguments, '/')
@@ -13,4 +17,4 @@ if (typeof window === 'undefined') {
 
 }
 
-module.exports = Path;
+export default Path;

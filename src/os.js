@@ -1,9 +1,10 @@
-'use strict';
 
-var Os = {};
+let Os = {};
 
 if (typeof window === 'undefined') {
-	Os = require('os');
+
+    Os = require('os');
+
 } else {
 
 	Os.homedir = function () {
@@ -12,4 +13,4 @@ if (typeof window === 'undefined') {
 
 }
 
-module.exports = Os;
+export default Os;

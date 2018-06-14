@@ -1,27 +1,32 @@
-var Tick = require('./tick');
 
-module.exports = function (array, iterator, final) {
-	var index = 0;
+import Tick from './tick';
 
-	function next (done) {
+export default function (array, iterator, final) {
+	let index = 0;
+
+	const next = function (done) {
 
 		index++;
 
 		if (done || index === array.length) {
-			if (final) {
+
+            if (final) {
 				final();
 			}
+
 		} else {
-			Tick(function () {
+			
+            Tick(function () {
 				iterator(index, next);
 			});
+
 		}
 
-	}
+    };
 
 	// instead of starting all the iterations, we only start the 1st one
 	iterator(0, next);
-};
+}
 
 //
 // if the operation is long or async this has way better performance
